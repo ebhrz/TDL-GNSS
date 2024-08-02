@@ -1,0 +1,9 @@
+{
+    "obs":["data/0610_KLT/COM38_210610_025603.obs"],
+    "eph":"data/0610_KLT/sta/hksc161d.21*",
+    "gt":"data/0610_KLT/20210610_100.txt",
+    "start_time":1623296917,
+    "end_time":1623297126,
+    "model":"model/bias",
+    "mode":"predict"
+}
