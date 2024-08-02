@@ -6,5 +6,5 @@
     "end_time":1623297556,
     "model":"model/weight",
     "mode":"train",
-    "epoch":300
+    "epoch":100
 }

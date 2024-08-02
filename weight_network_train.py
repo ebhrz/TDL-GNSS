@@ -88,7 +88,7 @@ for k in range(epoch):
             #print(predict_weight)
             select_sats = list(np.delete(np.array(sats),exclude))
 
-            ret = util.get_ls_pnt_pos_torch(o,nav,torch.diag(predict_weight))
+            ret = util.get_ls_pnt_pos_torch(o,nav,torch.diag(predict_weight),p_init=ret['pos'])
             
             
             gt_ecef = p3d.geodetic2ecef(*gt_row)

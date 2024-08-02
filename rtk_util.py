@@ -817,7 +817,7 @@ if torch_enable:
         x = torch.matmul(t4,z)
         return x
 
-    def get_ls_pnt_pos_torch(o,nav,w = None,exsatids=[]):
+    def get_ls_pnt_pos_torch(o,nav,w = None, p_init = None, exsatids=[]):
         maxiter = 10
         if o.n < 4:
             return {"status":False,"pos":torch.tensor([0,0,0,0],dtype=torch.float32),"msg":"no enough observations","data":{}}
@@ -852,7 +852,10 @@ if torch_enable:
             var[ii-skip] += vmeas.ptr
         prs = np.vstack(prs)
         SNR = np.array(SNR)
-        p = torch.tensor([0,0,0,0,0,0,0],dtype=torch.float64).to('cuda')
+        if p_init is None:
+            p = torch.tensor([0,0,0,0,0,0,0],dtype=torch.float64).to('cuda')
+        else:
+            p = torch.tensor(p_init,dtype=torch.float64).to('cuda')
         dp = torch.tensor([100,100,100],dtype=torch.float64)
         iii = 0 
         while torch.norm(dp)>0.0001 and iii < maxiter:
