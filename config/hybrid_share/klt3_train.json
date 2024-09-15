@@ -4,7 +4,7 @@
     "gt":"data/0610_KLT/20210610_100.txt",
     "start_time":1623297151,
     "end_time":1623297556,
-    "model":"model/weight",
+    "model":"model/hybrid_share_new",
     "mode":"train",
-    "epoch":500
+    "epoch":100
 }

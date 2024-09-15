@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pymap3d as p3d
-from model import BiasNetTest
+from model import HybridShareNet
 from torch.nn import HuberLoss,MSELoss
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -19,7 +19,7 @@ DEVICE = 'cuda'
 try:
     config = sys.argv[1]
 except:
-    config = "config/bias/klt3_train.json"
+    config = "config/hybrid_share/p40_klt3_train.json"
 
 with open(config) as f:
     conf = json.load(f)
@@ -30,13 +30,13 @@ if mode not in ['train','predict']:
 
 os.makedirs(conf['model'],exist_ok=True)
 result = config.split("/")[-1].split(".json")[0]
-result_path = "result/bias/"+result
+result_path = "result/hybrid_share/"+result
 os.makedirs(result_path,exist_ok=True)
-
 
 
 obs,nav,sta = util.read_obs(conf['obs'],conf['eph'])
 prl.sortobs(obs)
+
 obss = util.split_obs(obs)
 
 tmp = []
@@ -45,6 +45,8 @@ if conf.get("gt",None):
     gt = pd.read_csv(conf['gt'],skiprows = 30, header = None,sep =' +', skipfooter = 4, error_bad_lines=False, engine='python')
     gt[0] = gt[0]+18 # leap seconds
     gts = []
+
+
 
 # filter and normalize
 gather_data = []
@@ -56,8 +58,7 @@ for o in obss:
         if conf.get("gt",None):
             gt_row = gt.loc[(gt[0]-t).abs().argmin()]
             gts.append([gt_row[3]+gt_row[4]/60+gt_row[5]/3600,gt_row[6]+gt_row[7]/60+gt_row[8]/3600,gt_row[9]])
-
-            
+        
         ret = util.get_ls_pnt_pos(o,nav)
         if not ret['status']:
             continue
@@ -71,9 +72,7 @@ for o in obss:
         azel = np.delete(np.array(ret['data']['azel']).reshape((-1,2)),exclude,axis=0)
         gather_data.append(np.hstack([SNR.reshape(-1,1),azel[:,1:],resd]))
 
-        if conf.get("gt",None):
-            gt_row = gt.loc[(gt[0]-t).abs().argmin()]
-            gts.append([gt_row[3]+gt_row[4]/60+gt_row[5]/3600,gt_row[6]+gt_row[7]/60+gt_row[8]/3600,gt_row[9]])
+        
 
 norm_data = np.vstack(gather_data)
 imean = norm_data.mean(axis=0)
@@ -81,7 +80,7 @@ istd = norm_data.std(axis=0)
 
 print(f"preprocess done, mean:{imean}, std:{istd}")
 
-net = BiasNetTest(torch.tensor(imean,dtype=torch.float32),torch.tensor(istd,dtype=torch.float32))
+net = HybridShareNet(torch.tensor(imean,dtype=torch.float32),torch.tensor(istd,dtype=torch.float32))
 net.double()
 net = net.to(DEVICE)
 
@@ -118,11 +117,13 @@ for k in range(epoch):
             SNR = np.array(ret['data']['SNR'])
             azel = np.delete(np.array(ret['data']['azel']).reshape((-1,2)),exclude,axis=0)
             in_data = torch.tensor(np.hstack([SNR.reshape(-1,1),azel[:,1:],resd]),dtype=torch.float32).to(DEVICE)
-            predict_bias = net(in_data).squeeze()
+            predict= net(in_data)
+            weight = predict[0]
+            bias = predict[1]
             #print(predict_weight)
             select_sats = list(np.delete(np.array(sats),exclude))
 
-            ret = util.get_ls_pnt_pos_torch(o,nav,b = predict_bias.unsqueeze(1),p_init=ret['pos'])
+            ret = util.get_ls_pnt_pos_torch(o,nav,torch.diag(weight),bias.reshape(-1,1),p_init=ret['pos'])
             
             
             gt_ecef = p3d.geodetic2ecef(*gt_row)
@@ -139,8 +140,14 @@ for k in range(epoch):
         opt.step()
         print(loss.item()/len(obss))
         vis_loss.append(loss.item())
-torch.save(net.state_dict(),conf['model']+"/biasnet_3d.pth")
+    if k == 100:
+        torch.save(net.state_dict(),conf['model']+"/hybrid_share_100.pth")
+        vis_loss_300 = np.array(vis_loss)
+        plt.plot(vis_loss)
+        plt.savefig(result_path+"/loss_100.png")
+        np.savetxt(result_path+"/loss_100.csv",vis_loss_300.reshape(-1,1))
+torch.save(net.state_dict(),conf['model']+f"/hybrid_share_{epoch}.pth")
 vis_loss = np.array(vis_loss)
 plt.plot(vis_loss)
-plt.savefig(result_path+"/loss.png")
-np.savetxt(result_path+"/loss.csv",vis_loss.reshape(-1,1))
+plt.savefig(result_path+f"/loss_{epoch}.png")
+np.savetxt(result_path+f"/loss_{epoch}.csv",vis_loss.reshape(-1,1))

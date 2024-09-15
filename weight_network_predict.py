@@ -1,12 +1,13 @@
 import torch
 import pyrtklib as prl
+#import pyrtklib_debug.build.pyrtklib_debug as prl
 import rtk_util as util
 import json
 import sys
 import numpy as np
 import pandas as pd
 import pymap3d as p3d
-from model import BiasNetTest
+from model import WeightNet
 from torch.nn import HuberLoss,MSELoss
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -19,7 +20,7 @@ DEVICE = 'cuda'
 try:
     config = sys.argv[1]
 except:
-    config = "config/bias/klt1_predict.json"
+    config = "config/weight/whampoa_predict.json"
 
 with open(config) as f:
     conf = json.load(f)
@@ -31,11 +32,10 @@ if mode not in ['train','predict']:
 result = config.split("/")[-1].split(".json")[0]
 result_path = "result/"+result
 os.makedirs(result_path,exist_ok=True)
-os.makedirs(result_path+"/b",exist_ok=True)
 
-net = BiasNetTest()
+net = WeightNet()
 net.double()
-net.load_state_dict(torch.load(conf['model']+"/biasnet_h.pth"))
+net.load_state_dict(torch.load(conf['model']+"/weightnet_3d.pth"))
 net = net.to(DEVICE)
 
 
@@ -75,7 +75,8 @@ with tqdm(range(len(obss))) as t:
             ret = util.get_ls_pnt_pos(o,nav)
             if not ret['status']:
                 continue
-        except:
+        except Exception as e:
+            print(e)
             continue
 
         rs = ret['data']['eph']
@@ -87,24 +88,17 @@ with tqdm(range(len(obss))) as t:
         SNR = np.array(ret['data']['SNR'])
         azel = np.delete(np.array(ret['data']['azel']).reshape((-1,2)),exclude,axis=0)
         in_data = torch.tensor(np.hstack([SNR.reshape(-1,1),azel[:,1:],resd]),dtype=torch.float32).to(DEVICE)
-        predict_bias = net(in_data).squeeze()
-
-        sats_used = np.delete(np.array(sats),exclude,axis=0)
-        snp = sats_used
-        bnp = predict_bias.detach().cpu().numpy()
-        tnp = np.array([o.data[0].time.time+o.data[0].time.sec]*len(sats_used))
-        ep = pd.DataFrame(np.vstack([tnp,snp,bnp]).T)
-        ep.columns=['time','sat','bias']
-        ep.to_csv(result_path+"/b/%d.csv"%i,index=None)
-
-        ret = util.get_ls_pnt_pos_torch(o,nav,b = predict_bias.unsqueeze(1),p_init=ret['pos'])
+        predict_weight = net(in_data).squeeze()
+        ret = util.get_ls_pnt_pos_torch(o,nav,torch.diag(predict_weight),p_init=ret['pos'])
         TDL_pos.append(p3d.ecef2geodetic(*ret['pos'][:3].detach().cpu().numpy()))
         gt_pos.append([gt_row[0],gt_row[1],gt_row[2]])
         errors.append(p3d.geodetic2enu(*TDL_pos[-1],*gt_pos[-1]))
+        
+
 
 gt_pos = np.array(gt_pos)
 TDL_pos = np.array(TDL_pos)
 errors = np.array(errors)
 np.savetxt(result_path+"/gt.csv",gt_pos,delimiter=',',header="lat,lon,height",comments="")
-np.savetxt(result_path+"/TDL_bias_pos.csv",TDL_pos,delimiter=',',header="lat,lon,height",comments="")
+np.savetxt(result_path+"/TDL_weight_pos.csv",TDL_pos,delimiter=',',header="lat,lon,height",comments="")
 print(f"2D mean: {np.linalg.norm(errors[:,:2],axis=1).mean():.2f}, 3D mean: {np.linalg.norm(errors,axis=1).mean():.2f}")

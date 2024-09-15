@@ -126,7 +126,7 @@ def nextobsf(obs,i):
     n = 0
     while i+n < obs.n:
         tt = prl.timediff(obs.data[i+n].time,obs.data[i].time)
-        if tt > 0.05:
+        if tt<0 or tt > 0.05:
             break
         n+=1
     return n
@@ -157,7 +157,7 @@ def get_sat_cnt(obs,i,m,rcv):
 #             j+=1
 #     return nrs,noeph
 
-def split_obs(obs):
+def split_obs(obs,ref=False):
     i = 0
     m = nextobsf(obs,i)
     obss = []
@@ -174,11 +174,12 @@ def split_obs(obs):
             i+=m
             m = nextobsf(obs,i)
             continue
-        if rcv1 != m:
-            for j in range(m-rcv1):
-                if obs.data[i+j+rcv1].rcv == 2:
-                    tmp_obs.data[rcv1+rcv2] = obs.data[i+rcv1+j]
-                    rcv2+=1
+        if ref:
+            if rcv1 != m:
+                for j in range(m-rcv1):
+                    if obs.data[i+j+rcv1].rcv == 2:
+                        tmp_obs.data[rcv1+rcv2] = obs.data[i+rcv1+j]
+                        rcv2+=1
         tmp_obs.n = m
         tmp_obs.nmax = m
         i+=m
@@ -294,9 +295,9 @@ def read_obs(rcv,eph,ref=None):
         prl.readrnx(rcv,1,"",obs,nav,sta)
     if type(eph) is list:
         for f in eph:
-            prl.readrnx(f,1,"",obs,nav,sta)
+            prl.readrnx(f,2,"",obs,nav,sta)
     else:
-        prl.readrnx(eph,1,"",obs,nav,sta)
+        prl.readrnx(eph,2,"",obs,nav,sta)
     if ref:
         if type(ref) is list:
             for r in ref:
@@ -807,17 +808,96 @@ def get_ls_pnt_pos(o,nav,exsatids=[]):
     return {"status":True,"pos":p,"msg":"success","data":{"residual":resd,'azel':azel,"exclude":ex,"eph":rs,'dts':dts,'sats':sats,'prs':prs[list(inc)],'SNR':SNR[list(inc)]}}
 
 if torch_enable:
-    def wls_solve_torch(H,z,w = None):
+    def wls_solve_torch(H,z,w = None,b = None):
         if w is None:
             w = torch.eye(len(H))
+        if b is None:
+            b = torch.zeros_like(z)
         t1 = torch.matmul(H.T,w)
         t2 = torch.matmul(t1,H)
         t3 = torch.matmul(torch.inverse(t2),H.T)
         t4 = torch.matmul(t3,w)
-        x = torch.matmul(t4,z)
+        x = torch.matmul(t4,z-b)
         return x
 
-    def get_ls_pnt_pos_torch(o,nav,w = None, p_init = None, exsatids=[]):
+    def H_matrix_prl_torch(satpos,rp,dts,time,nav,sats,exclude = []):
+        rp_clone = rp.clone().detach().cpu().numpy()
+        ex = [] # exclude sat order
+        n = int(len(satpos)/6)
+        Ht = []
+        Rt = []
+        e = prl.Arr1Ddouble(3)
+        rr = prl.Arr1Ddouble(3)
+        rr[0] = rp_clone[0]
+        rr[1] = rp_clone[1]
+        rr[2] = rp_clone[2]
+        azel = prl.Arr1Ddouble(n*2)
+        pos = prl.Arr1Ddouble(3)
+        prl.ecef2pos(rr,pos)
+        
+        dion = prl.Arr1Ddouble(1)
+        vion = prl.Arr1Ddouble(1)
+        dtrp = prl.Arr1Ddouble(1)
+        vtrp = prl.Arr1Ddouble(1)
+
+        vels = []
+        vions = []
+        vtrps = []
+
+        sysname = prl.Arr1Dchar(4)
+        count = {'G':0,'C':0,'E':0,'R':0}
+        for i in range(n):
+            if i in exclude:
+                ex.append(i)
+                continue
+            sp = np.array(satpos[i*6+0:i*6+3])
+            sp = torch.tensor(sp,dtype=torch.float64).to('cuda')
+            #r = np.linalg.norm(sp-rp[:3])
+            #r = prl.geodist(satpos[i*6:i*6+3],rr,e)
+            r = torch.norm(sp-rp[:3])+prl.OMGE*(sp[0]*rp[1]-sp[1]*rp[0])/prl.CLIGHT
+            azel_tmp = prl.Arr1Ddouble(2)
+            prl.satazel(pos,e,azel_tmp)
+            azel[i*2] = azel_tmp[0]
+            azel[i*2+1] = azel_tmp[1]
+
+            if azel_tmp[1] < 0:
+                ex.append(i)
+                continue
+            prl.ionocorr(time,nav,sats[i],pos,azel_tmp,prl.IONOOPT_BRDC,dion,vion)
+            prl.tropcorr(time,nav,pos,azel_tmp,prl.TROPOPT_SAAS,dtrp,vtrp)
+            vions.append(vion.ptr)
+            vtrps.append(vtrp.ptr)
+            prl.satno2id(sats[i],sysname)
+            vel = varerr(azel_tmp[1],sysname.ptr[0])
+            vels.append(vel)
+            if 'G' in sysname.ptr:
+                Ht.append(torch.hstack([torch.hstack([-(sp[0]-rp[0])/r,-(sp[1]-rp[1])/r,-(sp[2]-rp[2])/r]),torch.tensor([1,0,0,0],dtype=torch.float64).to('cuda')]))
+                Rt.append(r+rp[3]-prl.CLIGHT*dts[i*2]+dtrp.ptr+dion.ptr)
+                count['G']+=1
+            elif 'C' in sysname.ptr:
+                Ht.append(torch.hstack([torch.hstack([-(sp[0]-rp[0])/r,-(sp[1]-rp[1])/r,-(sp[2]-rp[2])/r]),torch.tensor([0,1,0,0],dtype=torch.float64).to('cuda')]))
+                Rt.append(r+rp[4]-prl.CLIGHT*dts[i*2]+dtrp.ptr+dion.ptr)
+                count['C']+=1
+            elif 'E' in sysname.ptr:
+                Ht.append(torch.hstack([torch.hstack([-(sp[0]-rp[0])/r,-(sp[1]-rp[1])/r,-(sp[2]-rp[2])/r]),torch.tensor([0,0,1,0],dtype=torch.float64).to('cuda')]))
+                Rt.append(r+rp[5]-prl.CLIGHT*dts[i*2]+dtrp.ptr+dion.ptr)
+                count['E']+=1
+            elif 'R' in sysname.ptr:
+                Ht.append(torch.hstack([torch.hstack([-(sp[0]-rp[0])/r,-(sp[1]-rp[1])/r,-(sp[2]-rp[2])/r]),torch.tensor([0,0,0,1],dtype=torch.float64).to('cuda')]))
+                Rt.append(r+rp[6]-prl.CLIGHT*dts[i*2]+dtrp.ptr+dion.ptr)
+                count['R']+=1
+        if n-len(ex) > 3:
+            H = torch.vstack(Ht)
+            R = torch.vstack(Rt)
+        else:
+            H = torch.zeros((1,7))
+            R = torch.zeros((1,1))
+            #return H,R,azel,ex,np.array([]),count,vels,vions,vtrps
+        sysinfo = np.where(np.any(H.detach().cpu().numpy()!=0,axis=0))[0]
+        H = H[:,sysinfo]
+        return H,R,azel,ex,sysinfo,count,vels,vions,vtrps
+
+    def get_ls_pnt_pos_torch(o,nav,w = None, b = None, p_init = None, exsatids=[]):
         maxiter = 10
         if o.n < 4:
             return {"status":False,"pos":torch.tensor([0,0,0,0],dtype=torch.float32),"msg":"no enough observations","data":{}}
@@ -859,16 +939,27 @@ if torch_enable:
         dp = torch.tensor([100,100,100],dtype=torch.float64)
         iii = 0 
         while torch.norm(dp)>0.0001 and iii < maxiter:
-            H,R,azel,ex,sysinfo,syscount,vels,vions,vtrps = H_matrix_prl(rs,p.detach().cpu().numpy(),dts,o.data[0].time,nav,sats,exclude)
+            #H,R,azel,ex,sysinfo,syscount,vels,vions,vtrps = H_matrix_prl(rs,p.clone().detach().cpu().numpy(),dts,o.data[0].time,nav,sats,exclude)
+            H,R,azel,ex,sysinfo,syscount,vels,vions,vtrps = H_matrix_prl_torch(rs,p,dts,o.data[0].time,nav,sats,exclude)
             inc = set(range(o.n-len(noeph)))-set(ex)
             if len(inc) < 4:
                 iii+=1
                 continue
-            resd = prs[list(inc)] - R
-            H = torch.tensor(H,dtype=torch.float64).to('cuda')
-            resd = torch.tensor(resd,dtype=torch.float64).to('cuda')
-            dp = wls_solve_torch(H,resd,w)
+            resd = torch.tensor(prs[list(inc)],dtype=torch.float64).to('cuda') - R
+            #resd = prs[list(inc)] - R
+            #H = torch.tensor(H,dtype=torch.float64).to('cuda')
+            #resd = torch.tensor(resd,dtype=torch.float64).to('cuda')
+            if w is None:
+                w = torch.eye(H.shape[0],dtype=torch.float64).to('cuda')
+            if b is None:
+                b = torch.zeros_like(resd)
+            dp = wls_solve_torch(H,resd,w,b)
             p[sysinfo] = p[sysinfo]+dp.squeeze()
+            # if unroll:
+            #     p[sysinfo] = p[sysinfo]+dp.squeeze()
+            # else:
+            # p_init_detch = p[sysinfo].detach()
+            # p[sysinfo] = p_init_detch+dp.squeeze()
             iii+=1
         if iii >= 10:
             return {"status":False,"pos":p,"msg":"over max iteration times","data":{"residual":resd}}
@@ -877,3 +968,28 @@ if torch_enable:
             return {"status":False,"pos":p,"msg":"residual too large","data":{"residual":resd}}
         H,R,azel,ex,sysinfo,syscount,vels,vions,vtrps = H_matrix_prl(rs,p.detach().cpu().numpy(),dts,o.data[0].time,nav,sats,exclude)
         return {"status":True,"pos":p,"msg":"success","data":{"residual":resd,'azel':azel,"exclude":ex,"eph":rs,'dts':dts,'sats':sats,'prs':prs[list(inc)],'SNR':SNR[list(inc)]}}
+    
+def goGPSw(S,el):
+    A = 30
+    a = 20
+    s_0 = 10
+    s_1 = 50
+    def k1(s):
+        return -(s - s_1) / a
+
+    def k2(s):
+        return (s - s_1) / (s_0 - s_1)
+
+    def w(S, theta):
+        if S < s_1:
+            return (1 / np.sin(theta)**2) * (10**k1(S) * ((A / 10**k1(s_0) - 1) * k2(S) + 1))
+        else:
+            return 1
+    return w(S,el)
+
+def goGPSW(in_data):
+    ret = []
+    for i in in_data:
+        ret.append(1/goGPSw(i[0],i[1]))
+    ret = np.array(ret)
+    return ret

@@ -1,0 +1,9 @@
+{
+    "obs":["data/0610_KLT/GEOP161D.21o"],
+    "eph":"data/0610_KLT/sta/hksc161d.21*",
+    "gt":"data/0610_KLT/20210610_100.txt",
+    "start_time":1623296154,
+    "end_time":1623296357,
+    "model":"model/bias",
+    "mode":"predict"
+}

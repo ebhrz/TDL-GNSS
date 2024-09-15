@@ -1,0 +1,9 @@
+{
+    "obs":["data/whampoa0521/20210521.medium-urban.whampoa.ublox.f9p.obs"],
+    "eph":["data/whampoa0521/BRDM00DLR_S_20211410000_01D_MN.rnx"],
+    "gt":"data/whampoa0521/20210521.medium-urban.whampoa.ublox.f9p.txt",
+    "start_time":-1,
+    "end_time":-1,
+    "model":"model/weight",
+    "mode":"predict"
+}

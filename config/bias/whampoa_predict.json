@@ -1,0 +1,9 @@
+{
+    "obs":["data/whampoa/20210714.2.whampoa.ublox.f9p.obs"],
+    "eph":["data/whampoa/hksc195e.21*","data/whampoa/hksc195f.21*"],
+    "gt":"data/whampoa/20210714_2_100hz.txt",
+    "start_time":1626238258,
+    "end_time":1626239511,
+    "model":"model/bias",
+    "mode":"predict"
+}
