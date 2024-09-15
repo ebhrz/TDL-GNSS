@@ -146,7 +146,7 @@ for k in range(epoch):
         plt.plot(vis_loss)
         plt.savefig(result_path+"/loss_100.png")
         np.savetxt(result_path+"/loss_100.csv",vis_loss_300.reshape(-1,1))
-torch.save(net.state_dict(),conf['model']+f"/hybrid_share_{epoch}.pth")
+torch.save(net.state_dict(),conf['model']+f"/hybrid_share_3d.pth")
 vis_loss = np.array(vis_loss)
 plt.plot(vis_loss)
 plt.savefig(result_path+f"/loss_{epoch}.png")

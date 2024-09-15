@@ -42,7 +42,7 @@ class BiasNet(nn.Module):
         return x
 
 class BiasNetTest(nn.Module):
-    def __init__(self, imean=0, istd=1):
+    def __init__(self, imean=torch.tensor([0,0,0],dtype=torch.float64), istd=torch.tensor([1,1,1],dtype=torch.float64)):
         super().__init__()
         self.seq = torch.nn.Sequential(
             StandardizeLayer(imean, istd),

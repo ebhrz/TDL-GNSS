@@ -35,8 +35,8 @@ os.makedirs(result_path+"/bw",exist_ok=True)
 net = HybridShareNet()
 net.double()
 #net.load_state_dict(torch.load("model/hybrid_share/hybrid_share.pth"))
-#net.load_state_dict(torch.load("model/hybrid_share_new/hybrid_share_100.pth"))
-net.load_state_dict(torch.load("model/hybrid_share_p40/hybrid_share_150.pth"))
+net.load_state_dict(torch.load(f"{conf['model']}/hybrid_share_3d.pth"))
+#net.load_state_dict(torch.load("model/hybrid_share_p40/hybrid_share_150.pth"))
 net = net.to(DEVICE)
 
 

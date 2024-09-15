@@ -35,7 +35,7 @@ os.makedirs(result_path+"/b",exist_ok=True)
 
 net = BiasNetTest()
 net.double()
-net.load_state_dict(torch.load(conf['model']+"/biasnet_h.pth"))
+net.load_state_dict(torch.load(conf['model']+"/biasnet_3d.pth"))
 net = net.to(DEVICE)
 
 
