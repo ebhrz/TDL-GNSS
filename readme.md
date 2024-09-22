@@ -1,7 +1,8 @@
 # TDL-GNSS
 ## Tightly Coupled Deep Learning and GNSS Integration Framework
 
-This subsystem is built on **pyrtklib** and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. You can access the preprint version of our paper [here](link).
+This subsystem is built on **pyrtklib** and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. Our preprint version paper will come soon.
+<!-- You can access the preprint version of our paper [here](link). -->
 
 ### Features
 
@@ -99,9 +100,7 @@ python3 baseline.py config/bias/klt1_predict.json
 ## Citation
 If you find this tool useful, we would appreciate it if you cite our paper:
 ```latex
-{
-
-}
+coming soon
 ```
 
 ## Challenge
