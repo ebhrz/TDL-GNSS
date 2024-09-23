@@ -1,8 +1,18 @@
 # TDL-GNSS
 ## Tightly Coupled Deep Learning and GNSS Integration Framework
 
-This subsystem is built on **pyrtklib** and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. Our preprint version paper will come soon.
-<!-- You can access the preprint version of our paper [here](link). -->
+This subsystem is built on **pyrtklib** and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. You can access the preprint version of our paper [here on arxiv](https://arxiv.org/abs/2409.12996). We would greatly appreciate it if you could cite our work:
+```latex
+@misc{hu2024pyrtklibopensourcepackagetightly,
+      title={pyrtklib: An open-source package for tightly coupled deep learning and GNSS integration for positioning in urban canyons}, 
+      author={Runzhi Hu and Penghui Xu and Yihan Zhong and Weisong Wen},
+      year={2024},
+      eprint={2409.12996},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2409.12996}, 
+}
+```
 
 ### Features
 
@@ -100,8 +110,17 @@ python3 baseline.py config/bias/klt1_predict.json
 ## Citation
 If you find this tool useful, we would appreciate it if you cite our paper:
 ```latex
-coming soon
+@misc{hu2024pyrtklibopensourcepackagetightly,
+      title={pyrtklib: An open-source package for tightly coupled deep learning and GNSS integration for positioning in urban canyons}, 
+      author={Runzhi Hu and Penghui Xu and Yihan Zhong and Weisong Wen},
+      year={2024},
+      eprint={2409.12996},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2409.12996}, 
+}
 ```
+
 
 ## Challenge
 In the dataset, there is a file GEOP161D.21o collected using a Huawei P40 phone. So far, we have not been able to find the proper parameters to train a model that outperforms goGPS and RTKLIB on this data. Everyone is welcome to give it a try! :)
