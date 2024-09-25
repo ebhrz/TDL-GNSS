@@ -1,7 +1,7 @@
 # TDL-GNSS
 ## Tightly Coupled Deep Learning and GNSS Integration Framework
 
-This subsystem is built on **pyrtklib** and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. You can access the preprint version of our paper [here on arxiv](https://arxiv.org/abs/2409.12996). We would greatly appreciate it if you could cite our work:
+This subsystem is built on [**pyrtklib**](https://github.com/IPNL-POLYU/pyrtklib) and is designed to tightly integrate deep learning into the GNSS (Global Navigation Satellite System) processing workflow. You can access the preprint version of our paper [here on arxiv](https://arxiv.org/abs/2409.12996). We would greatly appreciate it if you could cite our work:
 ```latex
 @misc{hu2024pyrtklibopensourcepackagetightly,
       title={pyrtklib: An open-source package for tightly coupled deep learning and GNSS integration for positioning in urban canyons}, 
