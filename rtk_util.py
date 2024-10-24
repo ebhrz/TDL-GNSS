@@ -180,8 +180,12 @@ def split_obs(obs,ref=False):
                     if obs.data[i+j+rcv1].rcv == 2:
                         tmp_obs.data[rcv1+rcv2] = obs.data[i+rcv1+j]
                         rcv2+=1
-        tmp_obs.n = m
-        tmp_obs.nmax = m
+        if rcv2 == 0:
+            tmp_obs.n = rcv1
+            tmp_obs.nmax = rcv1
+        else:
+            tmp_obs.n = m
+            tmp_obs.nmax = m
         i+=m
         obss.append(tmp_obs)
         m = nextobsf(obs,i)
