@@ -126,7 +126,7 @@ def nextobsf(obs,i):
     n = 0
     while i+n < obs.n:
         tt = prl.timediff(obs.data[i+n].time,obs.data[i].time)
-        if tt<0 or tt > 0.05:
+        if abs(tt) > 0.05:
             break
         n+=1
     return n
