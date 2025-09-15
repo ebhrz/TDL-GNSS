@@ -1,0 +1,12 @@
+{
+    "mode": "train",
+    "prefix": "KLTDataset",
+    "datasets": [
+        "KLTDataset/config/1109_klt1_421.json", 
+        "KLTDataset/config/1109_klt2_294.json", 
+        "KLTDataset/config/1109_klt2_301.json", 
+        "KLTDataset/config/1109_klt3_666.json"
+    ],
+    "save_path": "result/1109klt",
+    "loss_type": "3d"
+}

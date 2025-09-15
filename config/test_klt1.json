@@ -1,0 +1,9 @@
+{
+    "mode": "predict",
+    "prefix": "KLTDataset",
+    "datasets": [
+        "KLTDataset/config/0610_klt1_203.json"
+    ],
+    "save_path": "result/0610klt1",
+    "model_path": "result/0610klt3/model/2025-07-30_21_38/multinet_3d.pth"
+}

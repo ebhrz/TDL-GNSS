@@ -1,0 +1,10 @@
+{
+    "mode": "train",
+    "prefix": "KLTDataset",
+    "datasets": [
+        "KLTDataset/config/0610_klt3_404.json"
+    ],
+    "loss_type": "3d",
+    "save_path": "result/0610klt3",
+    "device": "cpu"
+}

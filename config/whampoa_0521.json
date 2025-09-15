@@ -1,0 +1,17 @@
+{
+    "mode": "predict",
+    "prefix": "data",
+    "obs": [
+        "whampoa_0521/UrbanNav-HK-Deep-Urban-1.ublox.f9p.obs",
+        "whampoa_0521/hksc141g.21*"
+    ],
+    "gt": "whampoa_0521/gt.csv",
+    "start_utc": 1621578528,
+    "end_utc": 1621580061,
+    "loss_type": "3d",
+    "save_path": "result/whampoa_0521",
+    "model_path": "result/whampoa_0714/model/2025-09-15_09_55/checkpoint_epoch_10.pth",
+    "device": "cpu",
+    "batch": 50,
+    "epoch": 80
+}
